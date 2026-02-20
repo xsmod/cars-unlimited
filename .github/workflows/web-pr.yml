@@ -1,0 +1,53 @@
+name: Web App CI/CD - PR to Main
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "web/**"
+      - ".github/workflows/web-*.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_WEBAPP_NAME: app-cars-web-prod-001
+  RESOURCE_GROUP: rg-cars-web-prod-001
+  AZURE_WEBAPP_PACKAGE_PATH: web
+  NODE_VERSION: "20.x"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@v4
+
+      - name: "Login to Azure using OIDC"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "npm install, build, and test"
+        run: |
+          npm ci
+          npm run build --if-present
+          npm run test --if-present
+        working-directory: web
+
+      - name: Deploy to staging slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          slot-name: staging

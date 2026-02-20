@@ -1,0 +1,5 @@
+storage_account_name = "stxsmodstate01"
+container_name       = "cars-unlimited"
+key                  = "web"
+use_azuread_auth     = true
+use_cli              = true

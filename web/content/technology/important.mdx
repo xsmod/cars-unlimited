@@ -1,0 +1,26 @@
+---
+title: Important Considerations
+description: Important considerations for the CI/CD implementation
+keywords: ['CI/CD', 'constraints', 'strategy']
+menu-position: 3
+---
+
+## Shared Production/Dev Environment
+
+We currently share the same infrastructure between prod and dev. This requires careful deployment planning and configuration management to avoid development changes affecting production stability.
+
+## Feature Branch Strategy
+
+Developers use feature branches that merge to `dev` when ready. Each developer will eventually need isolated dev environments to test changes without affecting teammates' work.
+
+## Future Infrastructure Needs
+
+As the team scales, we'll need to provision individual dev environments per feature branch. This requires a more complex infrastructure setup but ensures stability while enabling rapid development and testing.
+
+## Artifact Management for Staging Promotion
+
+Tested and validated builds from staging should be stored as artifacts before production promotion. This enables audited deployments of exactly-tested builds to production without rebuilding, reducing deployment risk and improving traceability.
+
+## Blue-Green Deployment with Slot Swap
+
+Before performing a slot swap, the "new" production slot (main slot) must be fully warmed up and validated. The slot swap instantly redirects all traffic, so we verify health checks, smoke tests, and load readiness before execution to ensure zero-downtime deployments.

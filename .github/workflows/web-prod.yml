@@ -1,0 +1,37 @@
+name: Web App CI/CD - Production
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_WEBAPP_NAME: app-cars-web-prod-001
+  RESOURCE_GROUP: rg-cars-web-prod-001
+
+jobs:
+  swap-to-production:
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repo
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@v4
+
+      # Login to Azure using OIDC
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      # Swap main slot to production
+      - name: Swap main slot with production
+        run: |
+          az webapp deployment slot swap \
+            -g ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --slot main

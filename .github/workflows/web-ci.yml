@@ -1,0 +1,71 @@
+name: Web App CI/CD - Dev
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "web/**"
+      - ".github/workflows/web-*.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_WEBAPP_NAME: app-cars-web-prod-001
+  RESOURCE_GROUP: rg-cars-web-prod-001
+  AZURE_WEBAPP_PACKAGE_PATH: web
+  NODE_VERSION: "20.x"
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          # See here for caching with `yarn`, `bun` or other package managers https://github.com/actions/cache/blob/main/examples.md or you can leverage caching with actions/setup-node https://github.com/actions/setup-node
+          path: |
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: "Login to Azure using OIDC"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "npm install, build, and test"
+        run: |
+          npm ci
+          npm run build --if-present
+          npm run test --if-present
+
+          # mv ./build/static ./build/standalone/build
+          # mv ./public ./build/standalone
+        working-directory: web
+
+      - name: Deploy to dev slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          # package: web/build/standalone
+          slot-name: dev

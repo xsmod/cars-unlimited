@@ -1,0 +1,90 @@
+name: "Infrastructure"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+
+concurrency:
+  group: state-lock-infra
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    # The job name is set to "plan & apply" for manual runs on the main branch, and "plan" for all other runs.
+    name: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && 'Terraform Plan & Apply' || 'Terraform Plan' }}
+    environment: infrastructure
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
+
+    steps:
+      # Checkout the repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Terraform and tfcmt
+      - name: Install tfcmt
+        run: |
+          wget https://github.com/suzuki-shunsuke/tfcmt/releases/download/v4.14.14/tfcmt_linux_amd64.tar.gz
+          tar xzf tfcmt_linux_amd64.tar.gz
+          sudo mv tfcmt /usr/local/bin/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Login to Azure using OIDC
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      # Initialize a new or existing Terraform state
+      - name: Terraform Init
+        run: terraform init -backend-config ./azurerm.tfbackend -reconfigure
+
+      # Generates plan for Terraform
+      # An variable exitcode code of 0 indicated no changes, 1 a terraform failure, 2 there are pending changes.
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -detailed-exitcode -no-color -out tfplan
+
+      # Publish Terraform Plan as task summary
+      - name: Publish Terraform Plan as task summary
+        run: |
+          echo "Publishing tfcmt output as step summary ..."
+          tfcmt --config $GITHUB_WORKSPACE/.github/tfcmt.yml \
+            --output plan.md plan -- terraform show tfplan > /dev/null 2>&1
+          echo "$(cat plan.md)" >> $GITHUB_STEP_SUMMARY
+          echo "Posting tfcmt ... done"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Publish Terraform Plan as PR comment if branch is not main (otherwise the step will update the last merged PR)
+      - name: Publish Terraform Plan as PR comment
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Posting tfcmt output as PR comment ..."
+          tfcmt --config $GITHUB_WORKSPACE/.github/tfcmt.yml \
+            plan -- terraform show tfplan > /dev/null 2>&1
+          echo "Posting tfcmt ... done"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Terraform Apply
+      # Only run on main branch with workflow_dispatch and if there are changes (including drift)
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && steps.plan.outputs.exitcode == 2
+        run: |
+          terraform apply -auto-approve tfplan

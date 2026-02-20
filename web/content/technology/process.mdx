@@ -1,0 +1,26 @@
+---
+title: CI/CD Process
+description: Learn about the Cars Unlimited CI/CD process and workflow
+keywords: ['CI/CD', 'process', 'GitHub Actions', 'deployment']
+menu-position: 1
+---
+
+## Multi-Environment Pipeline
+
+Cars Unlimited uses a four-stage CI/CD pipeline across dev, staging, and production environments.
+
+**Stage 1: Development** - Pushes to `dev` branch trigger builds and tests, deploying to the dev slot for immediate feedback.
+
+**Stage 2: Staging** - Pull requests targeting `main` deploy to the staging slot for validation before merge approval.
+
+**Stage 3: Production (Main)** - Merges to `main` build and test code, deploying to the main production slot.
+
+**Stage 4: Blue-Green Swap** - GitHub releases trigger a zero-downtime slot swap, instantly promoting tested code to production with rollback capability.
+
+<img src="/images/ci-cd.png" alt="CI/CD Pipeline" />
+
+## Key Features
+
+- **Automated Testing:** Every change is built and tested before deployment
+- **Deployment Slots:** Multiple slots enable safe testing and instant rollbacks
+- **Branch Protection:** Main branch requires reviews before merging

@@ -1,0 +1,56 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+	"name": "Cars Unlimited Dev Container",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/base:noble",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/terraform:1": {},
+		"ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/devcontainers-extra/features/typescript:2": {},
+        "ghcr.io/r3dpoint/devcontainer-features/tailwindcss-standalone-cli:1": {},
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			// Set the default user settings.json values by providing a path to a file or a JSON object.
+            "settings": {
+                "git.confirmSync": false,
+                "git.autofetch": true,
+                "git.enableSmartCommit": true,
+                "git.useEditorAsCommitInput": false,
+                "explorer.compactFolders": false,
+                "editor.formatOnSave": true,
+                "files.trimFinalNewlines": true,
+                "files.trimTrailingWhitespace": true,
+                "files.associations": {
+                    "*.tfvars": "terraform"
+                }
+            },
+
+			// Add the IDs of extensions you want installed when the container is created in the array below.
+			"extensions": [
+				"HashiCorp.terraform",
+				"ms-vscode.azurecli",
+				"GitHub.vscode-github-actions",
+				"ms-vscode.vscode-typescript-next",
+				"bradlc.vscode-tailwindcss",
+				"unifiedjs.vscode-mdx"
+			]
+		}
+	}
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
